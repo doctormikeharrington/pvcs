@@ -1,0 +1,19 @@
+.DS_Store
+node_modules/
+_site/
+decrypted/
+
+# Keep PLAINTEXT pages OUT of the public repo — they live only on your Mac.
+source/
+
+# No GitHub Action in the free/public setup (it would require plaintext source in the repo).
+.github/
+
+# One-time helper, not part of the site
+push-to-github.command
+publish-now.command
+
+# held until domain is registered
+_CNAME.hold
+update-site.command
+login-template.html
