@@ -39,10 +39,14 @@ fi
 # To change it later, delete it first then re-add:
 #   security delete-generic-password -s pvcs-staticrypt
 if [ -z "${STATICRYPT_PASSWORD:-}" ]; then
-  kc_pw="$(security find-generic-password -s pvcs-staticrypt -w 2>/dev/null || true)"
-  if [ -n "$kc_pw" ]; then
+  if kc_pw="$(security find-generic-password -s pvcs-staticrypt -w 2>/tmp/pvcs-kc-err)" && [ -n "$kc_pw" ]; then
     export STATICRYPT_PASSWORD="$kc_pw"
     echo "Using the team password stored in your macOS Keychain."
+  else
+    echo "NOTE: could not read the team password from the Keychain -"
+    echo "      $(cat /tmp/pvcs-kc-err 2>/dev/null)"
+    echo "      You'll be prompted below. To store it so this stops, run in Terminal:"
+    echo "          security add-generic-password -a \"\$USER\" -s pvcs-staticrypt -w"
   fi
 fi
 
