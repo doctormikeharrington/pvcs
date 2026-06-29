@@ -32,6 +32,20 @@ if ! command -v npx >/dev/null 2>&1; then
 fi
 # ---------------------------------------------------------------------------
 
+# --- Team password: pull from the macOS Keychain if available ---------------
+# Store it once and you'll never be prompted again. Run this in Terminal:
+#   security add-generic-password -a "$USER" -s pvcs-staticrypt -w
+# (it will ask you to type the team password, then store it securely)
+# To change it later, delete it first then re-add:
+#   security delete-generic-password -s pvcs-staticrypt
+if [ -z "${STATICRYPT_PASSWORD:-}" ]; then
+  kc_pw="$(security find-generic-password -s pvcs-staticrypt -w 2>/dev/null || true)"
+  if [ -n "$kc_pw" ]; then
+    export STATICRYPT_PASSWORD="$kc_pw"
+    echo "Using the team password stored in your macOS Keychain."
+  fi
+fi
+
 echo "Encrypting pages from source/ ..."
 
 # Note: css/ and js/ live at the repo root and are served directly

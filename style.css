@@ -484,3 +484,58 @@ table.data tbody tr:hover { background-color: #e6eef5; }
   h1, .hero__title { font-size: 2.2rem; }
   h2, .page-header__title { font-size: 1.7rem; }
 }
+
+/* ============================================
+   Accordion (expand / collapse sections)
+   ============================================ */
+.accordion { margin-top: var(--spacing-sm); }
+
+.acc {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-white);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.acc__head {
+  list-style: none;
+  cursor: pointer;
+  padding: 1rem 1.25rem;
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: background-color 0.15s ease;
+}
+
+.acc__head:hover { background: var(--color-background-alt); }
+.acc__head::-webkit-details-marker { display: none; }
+
+.acc__head::after {
+  content: "\25B8"; /* right-pointing triangle */
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+  transition: transform 0.2s ease;
+  flex: none;
+}
+
+.acc[open] > .acc__head::after { transform: rotate(90deg); }
+.acc[open] > .acc__head { border-bottom: 1px solid var(--color-border); }
+
+.acc__body { padding: 1.25rem; }
+.acc__body > :last-child { margin-bottom: 0; }
+.acc__body .card { box-shadow: none; border: 1px solid var(--color-border); }
+.acc__body .card:last-child { margin-bottom: 0; }
+
+.accordion__controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+.accordion__controls a { cursor: pointer; }

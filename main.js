@@ -33,4 +33,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.querySelector('.nav__group-toggle');
     if (toggle) toggle.classList.add('nav__link--active');
   }
+
+  // Auto-open an accordion <details> when linked to directly (e.g. #connection-dialer)
+  function openTargetedDetails() {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el && el.tagName.toLowerCase() === 'details') {
+      el.open = true;
+      el.scrollIntoView();
+    }
+  }
+  openTargetedDetails();
+  window.addEventListener('hashchange', openTargetedDetails);
 });
