@@ -23,25 +23,14 @@ var PAS           = ['Jill','Lindsay','Britney','Dan','Kylee','Dana','Olivia'];
 
 // Admin-table columns -> exact Form question titles (order matters; matches website)
 var FIELD_MAP = [
-  ['SH email',        '1. Shared Health email'],
-  ['Cell',            '2. Cell number'],
-  ['Teams acct',      '3. Do you have a Shared Health MS Teams account?'],
-  ['Teams skill',     '4. Are you familiar with the use of MS Teams for information collaboration (eg. Team Channels) and video visits?'],
-  ['Momentum',        '5. Do you have access to CHR Momentum?'],
-  ['PVCS office',     '6. If yes, do you have access to the PVCS office within CHR?'],
-  ['eChart',          '7. Do you have access to echart?'],
-  ['EPR',             '8. Do you have access to EPR?'],
-  ['VECTRS EDIS',     '9. Do you have access to the VECTRS EDIS board on EPR?'],
-  ['Work mode',       '10. Do you intend to work on-site, remotely, or both?'],
-  ['SH computer',     'Do you have access to a Shared Health computer?'],
-  ['Telehealth suite','Do you have access to a Telehealth Suite?'],
-  ['Suite location',  'Telehealth Suite location (if applicable)'],
-  ['VPN - DH device', 'Are you set up for the remote access VPN from a Digital Health device?'],
-  ['VPN - personal',  'Are you set up for the remote access VPN from a personal device?'],
-  ['Mgd laptop',      'Do you have access to a Digital Health managed laptop that you can take home?'],
-  ['EPR via VPN',     '13. If yes to above, have you confirmed that you can access EPR from your personal device via the VPN?'],
-  ['eVisit',          '14. Do you have an MB telehealth evisit account?'],
-  ['Supervision',     '15. Psychiatrists only: Are you willing to sign a contract of supervision for the PVCS Physician Assistants?']
+  ['Work email',        'Work email'],
+  ['Cell',              '1. Cell number'],
+  ['Momentum',          '2. Do you have access to CHR Momentum?'],
+  ['eChart',            '3. Do you have access to echart?'],
+  ['EPR',               '4. Do you have access to Electronic Patient Record (EPR)?'],
+  ['TigerConnect',      '5. Do you have TigerConnect messaging active on your phone?'],
+  ['Scribeberry',       '6. Have you signed up for a Scribeberry account? (instructions: pvcsmanitoba.ca/scribeberry.html)'],
+  ['Scribeberry email', '7. What email address do you use for your Scribeberry account?']
 ];
 
 /* ============================ PHASE 2 SETUP ============================ */
@@ -180,7 +169,7 @@ function updateRosterFromResponse_(e) {
     ans[r.getItem().getTitle()] = v;
   });
 
-  var key = ans[KEY_QUESTION];
+  var key = ans[KEY_QUESTION] || String(ans['First Name'] || '').trim();
   if (!key) return;
 
   var tab = PSYCHIATRISTS.indexOf(key) >= 0 ? 'Psychiatrists'
