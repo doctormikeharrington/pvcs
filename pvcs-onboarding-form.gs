@@ -169,21 +169,72 @@ function updateRosterFromResponse_(e) {
     ans[r.getItem().getTitle()] = v;
   });
 
-  var key = ans[KEY_QUESTION] || String(ans['First Name'] || '').trim();
-  if (!key) return;
+  var name = String(ans['First Name'] || '').trim();
+  if (!name) return;
 
-  var tab = PSYCHIATRISTS.indexOf(key) >= 0 ? 'Psychiatrists'
-          : PAS.indexOf(key) >= 0 ? 'PAs' : null;
-  if (!tab) return; // "Other" / unknown -> leave for manual handling
-  if (tab === 'PAs') return; // PAs only store name + links (no onboarding columns)
+  // Route by the form's Position answer. Only Psychiatrists get roster rows;
+  // PAs/Residents/Clinical Assistants/Other are left for manual handling.
+  if (!/psychiatrist/i.test(String(ans['Position'] || ''))) return;
 
-  var sh = ss.getSheetByName(tab);
-  var names = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().map(function (r) { return r[0]; });
-  var row = names.indexOf(key);
-  if (row < 0) return;
+  var sh = ss.getSheetByName('Psychiatrists');
+  var last = sh.getLastRow();
+  var row = -1;
+  if (last >= 2) {
+    var names = sh.getRange(2, 1, last - 1, 1).getValues()
+      .map(function (r) { return String(r[0]).trim().toLowerCase(); });
+    row = names.indexOf(name.toLowerCase());
+  }
+
+  if (row < 0) {
+    // New person: append a row, reusing their Shift Record / Notes files if
+    // they already exist in the PVCS Admin folder (avoids duplicates), else
+    // creating fresh ones.
+    var folder = getOrCreateFolder_(FOLDER_NAME);
+    var links = getOrCreatePersonFiles_(folder, name, ['Date', 'Day / Night', 'Notes']);
+    row = (sh.getLastRow() >= 2 ? sh.getLastRow() : 1) - 1; // 0-based data index of new row
+    sh.getRange(row + 2, 1, 1, 3).setValues([[name, links[0], links[1]]]);
+  }
 
   var values = FIELD_MAP.map(function (f) { return ans[f[1]] || ''; });
   sh.getRange(row + 2, 4, 1, values.length).setValues([values]); // columns D.. onward
+
+  // Keep the roster alphabetical by first name.
+  var lastRow = sh.getLastRow();
+  if (lastRow >= 3) {
+    var cols = sh.getLastColumn();
+    var data = sh.getRange(2, 1, lastRow - 1, cols).getValues();
+    data.sort(function (a, b) { return String(a[0]).toLowerCase() < String(b[0]).toLowerCase() ? -1 : 1; });
+    sh.getRange(2, 1, data.length, cols).setValues(data);
+  }
+}
+
+// Find (by exact file name in the PVCS Admin folder) or create the per-person
+// Shift Record spreadsheet and Notes doc. Returns [shiftUrl, notesUrl].
+function getOrCreatePersonFiles_(folder, name, shiftCols) {
+  var shiftTitle = name + ' - Shift Record';
+  var docTitle   = name + ' - Notes & Archive';
+  var shiftUrl = findFileUrl_(folder, shiftTitle);
+  var docUrl   = findFileUrl_(folder, docTitle);
+
+  if (!shiftUrl) {
+    var s = SpreadsheetApp.create(shiftTitle);
+    var sf = DriveApp.getFileById(s.getId()); folder.addFile(sf); DriveApp.getRootFolder().removeFile(sf);
+    s.getSheets()[0].getRange(1, 1, 1, shiftCols.length).setValues([shiftCols]).setFontWeight('bold');
+    shiftUrl = s.getUrl();
+  }
+  if (!docUrl) {
+    var d = DocumentApp.create(docTitle);
+    var df = DriveApp.getFileById(d.getId()); folder.addFile(df); DriveApp.getRootFolder().removeFile(df);
+    d.getBody().appendParagraph(name + ' - Notes & Archived Emails').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    d.saveAndClose();
+    docUrl = d.getUrl();
+  }
+  return [shiftUrl, docUrl];
+}
+
+function findFileUrl_(folder, fileName) {
+  var it = folder.getFilesByName(fileName);
+  return it.hasNext() ? it.next().getUrl() : '';
 }
 
 /* ===== Maintenance: add the new PAs + sort both rosters alphabetically ===== */
