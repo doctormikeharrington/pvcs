@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px 16px; color: #1f2937; background: #f5f7fb; }
+  h1 { font-size: 1.35rem; color: #1f3a5f; margin-bottom: 4px; }
+  .muted { color: #64748b; font-size: 0.92rem; line-height: 1.45; }
+  select { width: 100%; padding: 10px; margin: 8px 0 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #fff; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .card span { font-weight: 600; }
+  .card button { background: #b91c1c; color: #fff; border: none; border-radius: 8px; padding: 9px 14px; font-size: 0.95rem; cursor: pointer; }
+  #confirm { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-top: 14px; }
+  .actions { display: flex; gap: 10px; }
+  .danger { background: #b91c1c; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 1rem; cursor: pointer; }
+  .secondary { background: #e2e8f0; color: #1f2937; border: none; border-radius: 8px; padding: 10px 16px; font-size: 1rem; cursor: pointer; }
+  #msg { padding: 12px 14px; border-radius: 8px; margin: 12px 0; display: none; }
+  .ok { background: #e7f6ec; color: #14532d; border: 1px solid #bbe5c8; }
+  .err { background: #fdecec; color: #7f1d1d; border: 1px solid #f5c6c6; }
+  button:disabled { opacity: 0.6; cursor: default; }
+  label { font-size: 0.9rem; font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>PVCS &mdash; Give Up a Shift</h1>
+  <p class="muted">If you can no longer work a scheduled shift, select your name, then the shift.
+  It will be posted on the open-shifts page immediately and the whole team will be emailed
+  (first come, first served). Dr.&nbsp;Harrington will follow up to confirm.</p>
+  <div id="msg"></div>
+  <label for="who">Your name</label>
+  <select id="who" onchange="loadShifts()"><option value="">Select your name&hellip;</option></select>
+  <div id="list"></div>
+  <div id="confirm" style="display:none">
+    <p id="confirmTitle" style="font-weight:700"></p>
+    <p class="muted">This will immediately post the shift for anyone to claim and email the whole team. Are you sure?</p>
+    <div class="actions">
+      <button class="danger" id="yesBtn" onclick="doGiveUp()">Yes, give it up</button>
+      <button class="secondary" id="noBtn" onclick="cancelConfirm()">Cancel</button>
+    </div>
+  </div>
+<script>
+  var myShifts = [];
+  var selectedKey = null;
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  google.script.run.withSuccessHandler(function (names) {
+    var sel = document.getElementById('who');
+    names.forEach(function (n) {
+      var o = document.createElement('option');
+      o.value = n; o.textContent = n;
+      sel.appendChild(o);
+    });
+  }).getTeamNames();
+
+  function loadShifts() {
+    hideMsg(); cancelConfirm();
+    var name = document.getElementById('who').value;
+    var el = document.getElementById('list');
+    if (!name) { el.innerHTML = ''; return; }
+    el.innerHTML = '<p class="muted">Loading your scheduled shifts&hellip;</p>';
+    google.script.run.withSuccessHandler(function (list) {
+      renderShifts(list);
+    }).getMyShifts(name);
+  }
+  function renderShifts(list) {
+    myShifts = list || [];
+    var el = document.getElementById('list');
+    if (!myShifts.length) {
+      el.innerHTML = '<p class="muted">No upcoming scheduled shifts found under this name.</p>';
+      return;
+    }
+    el.innerHTML = myShifts.map(function (s, i) {
+      return '<div class="card"><span>' + esc(s.label) + '</span>' +
+             '<button onclick="pick(' + i + ')">Give up this shift</button></div>';
+    }).join('');
+  }
+  function pick(i) {
+    var s = myShifts[i];
+    if (!s) return;
+    selectedKey = s.key;
+    document.getElementById('confirmTitle').textContent = 'Giving up: ' + s.label;
+    document.getElementById('confirm').style.display = 'block';
+    document.getElementById('list').style.display = 'none';
+    hideMsg();
+  }
+  function cancelConfirm() {
+    selectedKey = null;
+    document.getElementById('confirm').style.display = 'none';
+    document.getElementById('list').style.display = 'block';
+  }
+  function showMsg(text, cls) {
+    var m = document.getElementById('msg');
+    m.textContent = text;
+    m.className = cls;
+    m.style.display = 'block';
+  }
+  function hideMsg() { document.getElementById('msg').style.display = 'none'; }
+  function setBusy(b) {
+    document.getElementById('yesBtn').disabled = b;
+    document.getElementById('noBtn').disabled = b;
+    document.getElementById('yesBtn').textContent = b ? 'Posting…' : 'Yes, give it up';
+  }
+  function doGiveUp() {
+    var name = document.getElementById('who').value;
+    setBusy(true);
+    google.script.run
+      .withSuccessHandler(function (res) {
+        setBusy(false);
+        cancelConfirm();
+        renderShifts(res.shifts);
+        showMsg(res.msg, res.ok ? 'ok' : 'err');
+      })
+      .withFailureHandler(function (err) {
+        setBusy(false);
+        showMsg('Something went wrong: ' + err + ' — please try again.', 'err');
+      })
+      .giveUpShift(name, selectedKey);
+  }
+</script>
+</body>
+</html>

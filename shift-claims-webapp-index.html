@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px 16px; color: #1f2937; background: #f5f7fb; }
+  h1 { font-size: 1.35rem; color: #1f3a5f; margin-bottom: 4px; }
+  .muted { color: #64748b; font-size: 0.92rem; line-height: 1.45; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .card span { font-weight: 600; }
+  .card button { background: #1f3a5f; color: #fff; border: none; border-radius: 8px; padding: 9px 14px; font-size: 0.95rem; cursor: pointer; }
+  #form { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-top: 14px; }
+  label { font-size: 0.9rem; font-weight: 600; }
+  input { width: 100%; padding: 10px; margin: 6px 0 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+  .actions { display: flex; gap: 10px; }
+  .primary { background: #1f3a5f; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 1rem; cursor: pointer; }
+  .secondary { background: #e2e8f0; color: #1f2937; border: none; border-radius: 8px; padding: 10px 16px; font-size: 1rem; cursor: pointer; }
+  #msg { padding: 12px 14px; border-radius: 8px; margin: 12px 0; display: none; }
+  .ok { background: #e7f6ec; color: #14532d; border: 1px solid #bbe5c8; }
+  .err { background: #fdecec; color: #7f1d1d; border: 1px solid #f5c6c6; }
+  button:disabled { opacity: 0.6; cursor: default; }
+</style>
+</head>
+<body>
+  <h1>PVCS &mdash; Open Evening Shifts</h1>
+  <p class="muted">On-call period Aug 31 &ndash; Nov 8, 2026. Evening shifts run 17:00&ndash;08:00.
+  Shifts are first-come, first-served &mdash; once a shift is claimed it disappears from this list.
+  Dr.&nbsp;Harrington will follow up by email to confirm.</p>
+  <div id="msg"></div>
+  <div id="list"><p class="muted">Loading open shifts&hellip;</p></div>
+  <div id="form" style="display:none">
+    <p id="formTitle" style="font-weight:700"></p>
+    <label for="name">Your name</label>
+    <input id="name" type="text" autocomplete="name">
+    <label for="email">Your email</label>
+    <input id="email" type="email" autocomplete="email">
+    <div class="actions">
+      <button class="primary" id="claimBtn" onclick="submitClaim()">Claim this shift</button>
+      <button class="secondary" id="cancelBtn" onclick="cancelForm()">Cancel</button>
+    </div>
+  </div>
+<script>
+  var shifts = [];
+  var selected = null;
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function render(list) {
+    shifts = list || [];
+    var el = document.getElementById('list');
+    if (!shifts.length) {
+      el.innerHTML = '<p class="muted">No open shifts remain &mdash; they have all been claimed. Thank you!</p>';
+      return;
+    }
+    el.innerHTML = shifts.map(function (s) {
+      return '<div class="card"><span>' + esc(s.label) + '</span>' +
+             '<button onclick="pick(' + Number(s.id) + ')">Take this shift</button></div>';
+    }).join('');
+  }
+  function pick(id) {
+    selected = id;
+    var s = shifts.filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!s) return;
+    document.getElementById('formTitle').textContent = 'Claiming: ' + s.label;
+    document.getElementById('form').style.display = 'block';
+    document.getElementById('list').style.display = 'none';
+    hideMsg();
+    document.getElementById('name').focus();
+  }
+  function cancelForm() {
+    selected = null;
+    document.getElementById('form').style.display = 'none';
+    document.getElementById('list').style.display = 'block';
+  }
+  function showMsg(text, cls) {
+    var m = document.getElementById('msg');
+    m.textContent = text;
+    m.className = cls;
+    m.style.display = 'block';
+  }
+  function hideMsg() { document.getElementById('msg').style.display = 'none'; }
+  function setBusy(b) {
+    document.getElementById('claimBtn').disabled = b;
+    document.getElementById('cancelBtn').disabled = b;
+    document.getElementById('claimBtn').textContent = b ? 'Claiming…' : 'Claim this shift';
+  }
+  function submitClaim() {
+    var name = document.getElementById('name').value;
+    var email = document.getElementById('email').value;
+    setBusy(true);
+    google.script.run
+      .withSuccessHandler(function (res) {
+        setBusy(false);
+        if (res.shifts) render(res.shifts);
+        showMsg(res.msg, res.ok ? 'ok' : 'err');
+        if (res.ok) {
+          document.getElementById('name').value = '';
+          document.getElementById('email').value = '';
+          cancelForm();
+        } else if (res.shifts) {
+          cancelForm();
+        }
+      })
+      .withFailureHandler(function (err) {
+        setBusy(false);
+        showMsg('Something went wrong: ' + err + ' — please try again.', 'err');
+      })
+      .claimShift(selected, name, email);
+  }
+  google.script.run.withSuccessHandler(render).getOpenShifts();
+</script>
+</body>
+</html>
