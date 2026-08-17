@@ -51,10 +51,16 @@ function createResidentForm() {
     'How assignment works: after the deadline, shifts are distributed as evenly as ' +
     'possible among everyone who responds (no seniority), never exceeding your stated ' +
     'maximum, with your shifts spaced out across the period as much as possible. ' +
-    'You will only ever be assigned shifts you tick below.'
+    'You will only ever be assigned shifts you tick below.\n\n' +
+    'You will be emailed a copy of your answers with a link that lets you review ' +
+    'and change them any time before the deadline.'
   );
-  form.setCollectEmail(false);
+  setResponseEditSettings_(form);   // collect email + allow response editing
   form.setLimitOneResponsePerUser(false);
+  // NOTE: "Send responders a copy of their response" has NO Apps Script method.
+  // After creating the form, set it by hand once:
+  //   Settings tab > Responses > Send responders a copy of their response > Always
+  // Also confirm "Collect email addresses" reads "Responder input", not "Verified".
 
   form.addTextItem().setTitle('Your name').setRequired(true);
 
@@ -84,4 +90,20 @@ function createResidentForm() {
   Logger.log('EDIT link (you): ' + form.getEditUrl());
   Logger.log('LIVE link (send to residents): ' + form.getPublishedUrl());
   Logger.log('Responses sheet: ' + ss.getUrl());
+  Logger.log('NEXT: Settings > Responses > "Send responders a copy of their response" = Always.');
+}
+
+/**
+ * Collect email + allow response editing, so residents get a copy of their
+ * answers with an "Edit response" link and can change them before the deadline.
+ * An edit overwrites the same row in the responses sheet rather than adding one.
+ * Duplicated from enable-response-edits.gs so this file runs on its own.
+ */
+function setResponseEditSettings_(form) {
+  try {
+    form.setEmailCollectionType(FormApp.EmailCollectionType.RESPONDER_INPUT);
+  } catch (e) {
+    form.setCollectEmail(true);   // older projects: may land on "Verified", check in the UI
+  }
+  form.setAllowResponseEdits(true);
 }
