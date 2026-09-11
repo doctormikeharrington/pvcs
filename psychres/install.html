@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Psychiatry</title>
+<meta name="apple-mobile-web-app-title" content="Psychiatry">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#ffffff">
+<script>
+  // Swap the address bar to the launcher URL ("/") without leaving this page,
+  // so "Add to Home Screen" saves "/" — which forwards to the app on every launch.
+  try { history.replaceState(null, '', './'); } catch (e) {}
+</script>
+<style>
+  :root{--ink:#1f2937;--muted:#5b6472;--blue:#2f5fb3;--line:#e3e6ea}
+  *{box-sizing:border-box}
+  body{margin:0;font:17px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#fff}
+  main{max-width:520px;margin:0 auto;padding:28px 18px 40px}
+  header{text-align:center}
+  header img{width:112px;height:auto}
+  h1{font-size:1.35rem;margin:10px 0 4px}
+  .sub{color:var(--muted);margin:0 0 22px}
+  section{border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:0 0 14px}
+  h2{font-size:1.05rem;margin:0 0 8px}
+  ol{margin:0;padding-left:1.25em}
+  li{margin:5px 0}
+  b{font-weight:600}
+  .note{color:var(--muted);font-size:.92rem;margin:8px 0 0}
+  .hide{display:none}
+  .btn{display:block;text-align:center;background:var(--blue);color:#fff;text-decoration:none;
+       font-weight:600;padding:14px;border-radius:12px;margin:22px 0 0}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icon-512.png" alt="Psychiatry crest">
+    <h1>Add the Psychiatry app to your home screen</h1>
+    <p class="sub">One-time setup — takes about 20 seconds.</p>
+  </header>
+
+  <section id="ios">
+    <h2>iPhone / iPad (Safari)</h2>
+    <ol>
+      <li>Make sure this page is open in <b>Safari</b>.</li>
+      <li>Tap the <b>Share</b> button <span aria-hidden="true">(square with an up-arrow)</span>. On iOS 26, tap <b>⋯</b> at the bottom right first, then <b>Share</b>.</li>
+      <li>Scroll down and tap <b>Add to Home Screen</b> (tap <b>View More</b> if you don't see it).</li>
+      <li>If there's an <b>Open as Web App</b> switch, turn it <b>off</b>.</li>
+      <li>Tap <b>Add</b>.</li>
+    </ol>
+    <p class="note">Turning “Open as Web App” off makes the icon open in Safari, where you're already signed in to Google.</p>
+  </section>
+
+  <section id="android">
+    <h2>Android (Chrome)</h2>
+    <ol>
+      <li>Make sure this page is open in <b>Chrome</b>.</li>
+      <li>Tap the <b>⋮</b> menu at the top right.</li>
+      <li>Tap <b>Add to home screen</b>, then <b>Add</b> (choose <b>Create shortcut</b> if asked).</li>
+    </ol>
+  </section>
+
+  <a class="btn" href="./">Open the app now</a>
+</main>
+<script>
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/i.test(ua);
+  if (isIOS) document.getElementById('android').className = 'hide';
+  if (isAndroid) document.getElementById('ios').className = 'hide';
+</script>
+</body>
+</html>
