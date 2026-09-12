@@ -14,7 +14,8 @@
   // Home-screen launcher: forwards straight to the Apps Script web app.
   // To install the icon, residents open /install (this page never lingers).
   var APP_URL = 'https://script.google.com/macros/s/AKfycbx8LFbboXG1Essl4EjUggk1hIN1VFiujjRgojEX5qhh76mRsU5TF_ove0PRu8fca6O45Q/exec';
-  location.replace(APP_URL);
+  // Keep any query string (a QR link routed through here still records attendance).
+  location.replace(APP_URL + (location.search || ''));
 </script>
 <style>
   body{margin:0;font:16px -apple-system,system-ui,sans-serif;color:#333;background:#fff;
@@ -27,7 +28,8 @@
   <div>
     <img src="icon-192.png" alt="">
     <p>Opening the Psychiatry Residency app…</p>
-    <p><a href="https://script.google.com/macros/s/AKfycbx8LFbboXG1Essl4EjUggk1hIN1VFiujjRgojEX5qhh76mRsU5TF_ove0PRu8fca6O45Q/exec">Tap here if it doesn't open</a></p>
+    <p><a id="fallback" href="https://script.google.com/macros/s/AKfycbx8LFbboXG1Essl4EjUggk1hIN1VFiujjRgojEX5qhh76mRsU5TF_ove0PRu8fca6O45Q/exec">Tap here if it doesn't open</a></p>
+    <script>document.getElementById('fallback').href = APP_URL + (location.search || '');</script>
   </div>
 </body>
 </html>
