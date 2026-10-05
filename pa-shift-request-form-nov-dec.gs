@@ -11,8 +11,9 @@
  *   8. 1st–9th choice shift (dropdowns)
  *   9. Any other shifts you would be willing to work (checkboxes)
  *
- * SHIFT OPTIONS ARE INTENTIONALLY EMPTY at creation — the Nov–Dec base schedule
- * doesn't exist yet. Run addShiftOptions() once it does (edit SHIFTS first).
+ * SHIFT OPTIONS populated 2026-10-03 — run addShiftOptions() against the live
+ * form (FORM_ID below), then setDeadline() to write the deadline into the
+ * description.
  *
  * Run createPAForm() ONCE. The log prints the edit link, live link and
  * responses sheet. Then run addShiftOptions() later to populate the choices.
@@ -42,12 +43,49 @@ var PAY_PERIODS = [
 var RANKS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
 
 /**
- * Fill this in once the November–December base schedule exists, then run
- * addShiftOptions(). Use the same label format as last period, e.g.
- *   'Mon Nov 2 — Evening (1700–2200)'
- *   'Sat Nov 7 — Day (0800–1800)'
+ * The shifts offered this round, built 2026-10-03 from the published Nov–Dec
+ * schedule: every evening Nov 1 – Dec 31 (nothing is assigned in the evening
+ * row for this period), plus the day shifts left with only ONE PA after
+ * Brittany's and Alana's pickups — the 9 single-PA weekend days and Christmas
+ * Day. 71 shifts in total.
  */
-var SHIFTS = [];
+var DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+var OPEN_DAY_SHIFTS = [
+  'Sun Nov 1 — Day (0800–1800)',
+  'Sat Nov 7 — Day (0800–1800)',
+  'Sun Nov 8 — Day (0800–1800)',
+  'Sun Nov 15 — Day (0800–1800)',
+  'Sat Nov 28 — Day (0800–1800)',
+  'Sun Dec 6 — Day (0800–1800)',
+  'Sat Dec 19 — Day (0800–1800)',
+  'Sun Dec 20 — Day (0800–1800)',
+  'Fri Dec 25 — Day (0800–1800)',
+  'Sat Dec 26 — Day (0800–1800)'
+];
+
+/** Every evening Nov 1 – Dec 31 2026, in schedule order. */
+function buildEvenings_() {
+  var out = [];
+  var d = new Date(2026, 10, 1);          // Nov 1 (month is 0-based)
+  var end = new Date(2026, 11, 31);       // Dec 31
+  while (d <= end) {
+    out.push(DAY_NAMES[d.getDay()] + ' ' + MONTH_NAMES[d.getMonth()] + ' ' +
+             d.getDate() + ' — Evening (1730–2230)');
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+var SHIFTS = buildEvenings_().concat(OPEN_DAY_SHIFTS);
+
+/** Sanity check before touching the live form. */
+function logShifts() {
+  Logger.log(SHIFTS.join('\n'));
+  Logger.log('TOTAL: ' + SHIFTS.length + ' (expect 71 = 61 evenings + 10 days)');
+}
 
 var FORM_TITLE = 'PA PVCS — Additional Shift Request Form — November and December 2026';
 
@@ -162,6 +200,26 @@ function setResponseEditSettings_(form) {
     form.setCollectEmail(true);
   }
   form.setAllowResponseEdits(true);
+}
+
+/**
+ * Writes the deadline into the live form's description. Run once.
+ * Everything else in the description is unchanged from createPAForm().
+ */
+function setDeadline() {
+  var form = FormApp.openById(FORM_ID);
+  form.setDescription(
+    'Please submit your requests for additional shifts on the PVCS service for ' +
+    'November 1 – December 31, 2026.\n\n' +
+    'DEADLINE: 5:00 PM, Thursday, October 8, 2026\n\n' +
+    'Rank the shifts you would like in order of preference, and tick any other shifts ' +
+    'you would be willing to work. Assignment follows the published process: requests ' +
+    'are processed in seniority order, rotating one shift at a time, and no one is ' +
+    'given more shifts than the maximums they state below.\n\n' +
+    'You will be emailed a copy of your answers with a link that lets you review ' +
+    'and change them any time before the deadline.'
+  );
+  Logger.log('Deadline set. Live link: ' + form.getPublishedUrl());
 }
 
 function addShiftOptions() {
