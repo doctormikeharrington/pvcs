@@ -136,8 +136,7 @@ function certificateHtml_(L, score, total, certId, when) {
   return '' +
     '<div style="max-width:640px;margin:24px auto;border:10px solid #1f3a5f;background:#fffdf7;font-family:Georgia,\'Times New Roman\',serif;color:#1a202c">' +
     '<div style="margin:8px;border:2px solid #c9a227;padding:36px 34px 28px;text-align:center">' +
-    '<div style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#2c5282">Provincial Virtual Crisis Service &middot; Manitoba</div>' +
-    '<div style="font-size:30px;color:#1f3a5f;margin:12px 0 4px">Certificate of Completion</div>' +
+    '<div style="font-size:30px;color:#1f3a5f;margin:0 0 4px">Certificate of Completion</div>' +
     '<div style="font-style:italic;color:#4a5568;margin-bottom:22px">' + COURSE_TITLE + '</div>' +
     '<div style="font-size:15px">This certifies that</div>' +
     '<div style="font-size:28px;font-weight:bold;margin:10px auto 12px;padding-bottom:6px;border-bottom:1px solid #c9a227;display:inline-block">' + esc_(L.first + ' ' + L.last) + '</div>' +
