@@ -52,6 +52,15 @@ function patchFile(path) {
     changed = true;
   }
 
+  // Same for the PA/CA Form 4 course (separate password -> separate keys).
+  const isCourse = /(^|\/)form4course[\\/]index\.html$/.test(path);
+  if (isCourse && html.indexOf("staticrypt_form4course_passphrase") === -1) {
+    html = html
+      .replace(/"staticrypt_passphrase"/g, '"staticrypt_form4course_passphrase"')
+      .replace(/"staticrypt_expiration"/g, '"staticrypt_form4course_expiration"');
+    changed = true;
+  }
+
   // --- Fix 2a: read a saved login from sessionStorage as a fallback ---------
   const readNeedle =
     "const hashedPassword = localStorage.getItem(rememberPassphraseKey);";

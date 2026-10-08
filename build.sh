@@ -91,6 +91,25 @@ STATICRYPT_PASSWORD='admin' npx staticrypt source/admin/index.html \
   --template-color-primary "#1f3a5f" \
   --template-color-secondary "#edf2f7"
 
+echo "Encrypting the PA/CA Form 4 course with its own (separate) password ..."
+
+# The PA/CA Form 4 Certification Course lives at source/form4course/index.html
+# and is served at pvcsmanitoba.ca/form4course/ with its OWN password
+# ('healthact') so course writers do not need the team password.
+mkdir -p form4course
+STATICRYPT_PASSWORD='healthact' npx staticrypt source/form4course/index.html \
+  --directory form4course \
+  --config .staticrypt-form4course.json \
+  --remember 30 \
+  --short \
+  --template login-template.html \
+  --template-title "PVCS — PA/CA Form 4 Certification Course" \
+  --template-instructions "For authorized course writers only. Please enter the course password." \
+  --template-button "Enter" \
+  --template-placeholder "Course password" \
+  --template-color-primary "#1f3a5f" \
+  --template-color-secondary "#edf2f7"
+
 echo "Patching login persistence (session login + separate admin login) ..."
 
 # Post-process the generated pages so that:
@@ -99,6 +118,6 @@ echo "Patching login persistence (session login + separate admin login) ..."
 #   * visitors stay logged in for the rest of the browser session even if they
 #     don't tick "remember me".
 # Safe to run every build; it skips pages that are already patched.
-node patch-staticrypt.js *.html admin/index.html
+node patch-staticrypt.js *.html admin/index.html form4course/index.html
 
 echo "Done. Encrypted pages written to the site root (admin page at /admin)."
