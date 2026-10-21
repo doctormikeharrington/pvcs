@@ -23,7 +23,7 @@ const SHIFTS_TAB = 'Shifts';
 const PROP_SHEET_ID = 'PA_LEFTOVER_NOV_DEC_SHEET_ID';
 
 const AUDIENCE = 'PA';                                  // 'PA' or 'RESIDENT'
-const CLOSES_AT = new Date('2026-10-12T22:00:00-05:00'); // 22:00 Mon Oct 12, Winnipeg
+const CLOSES_AT = new Date('2026-11-02T08:00:00-06:00'); // 08:00 Mon Nov 2, Winnipeg (reopened 2026-10-19; was 22:00 Mon Oct 12)
 
 /* The 18 shifts nobody was assigned in the Nov–Dec seniority round. */
 const INITIAL_SHIFTS = [
@@ -46,6 +46,29 @@ const INITIAL_SHIFTS = [
   ['Fri Dec 25 — Evening (1730–2230) (Christmas Day)'],
   ['Sat Dec 26 — Evening (1730–2230)']
 ];
+
+/* ONE-OFF (2026-10-19): Lindsey Shumila off Nov 2–6. Reopen for PAs with only
+ * Mon Nov 2 + Tue Nov 3 Day (the days left with no PA). Marks every other
+ * still-OPEN row as filled in the resident round so it no longer shows.
+ * Idempotent. Kept FIRST so the editor's Run button runs it. */
+function reopenNov2Nov3() {
+  const sh = sheet_();
+  const data = sh.getDataRange().getValues();
+  const want = ['Mon Nov 2 — Day (0800–1800)', 'Tue Nov 3 — Day (0800–1800)'];
+  let maxId = 0;
+  const have = {};
+  for (let i = 1; i < data.length; i++) {
+    maxId = Math.max(maxId, Number(data[i][0]) || 0);
+    have[data[i][1]] = true;
+    if (want.indexOf(data[i][1]) === -1 && String(data[i][2]).toUpperCase() === 'OPEN') {
+      sh.getRange(i + 1, 3).setValue('RESIDENT ROUND');
+    }
+  }
+  want.forEach(function (w) {
+    if (!have[w]) { maxId++; sh.appendRow([maxId, w, 'OPEN', '', '', '']); }
+  });
+  Logger.log('done; open=' + JSON.stringify(getOpenShifts_()));
+}
 
 function setup() {
   const props = PropertiesService.getScriptProperties();
