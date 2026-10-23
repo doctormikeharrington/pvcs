@@ -43,11 +43,10 @@ function doPost(e) {
     const d = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     const L = {
       first: clean_(d.first, 60), last: clean_(d.last, 60), role: clean_(d.role, 40),
-      cpsm: clean_(d.cpsm, 20), email: clean_(d.email, 120).toLowerCase()
+      email: clean_(d.email, 120).toLowerCase()
     };
     if (!L.first || !L.last) return json_({ ok: false, error: 'missing name' });
     if (['Physician Assistant', 'Clinical Assistant'].indexOf(L.role) < 0) return json_({ ok: false, error: 'invalid role' });
-    if (!/^[A-Za-z0-9\-]{2,20}$/.test(L.cpsm)) return json_({ ok: false, error: 'invalid CPSM number' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(L.email)) return json_({ ok: false, error: 'invalid email' });
 
     const answers = d.answers || {};
@@ -63,7 +62,7 @@ function doPost(e) {
     lock.waitLock(20000);
     try {
       getSheet_().appendRow([
-        now, L.first, L.last, L.role, L.cpsm, L.email, score, total,
+        now, L.first, L.last, L.role, '', L.email, score, total,
         passed ? 'PASS' : 'FAIL', certId, JSON.stringify(answers), clean_(d.version, 20)
       ]);
     } finally { lock.releaseLock(); }
@@ -122,7 +121,7 @@ function sendAdminEmail_(L, score, total, passed, certId, when) {
       '<p><strong>' + esc_(name) + '</strong> has ' + (passed ? 'successfully completed' : 'attempted') +
       ' the ' + COURSE_TITLE + '.</p>' +
       '<table cellpadding="4" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px">' +
-      row_('Role', L.role) + row_('CPSM registration no.', L.cpsm) + row_('Email', L.email) +
+      row_('Role', L.role) + row_('Email', L.email) +
       row_('Score', score + '/' + total + (passed ? ' — PASS' : ' — not passed')) +
       (certId ? row_('Certificate ID', certId) : '') +
       row_('Completed', Utilities.formatDate(when, TZ, 'yyyy-MM-dd HH:mm') + ' (Winnipeg)') +
@@ -147,8 +146,7 @@ function certificateHtml_(L, score, total, certId, when, sigSrc) {
     '<div style="font-style:italic;color:#4a5568;margin-bottom:22px">' + COURSE_TITLE + '</div>' +
     '<div style="font-size:15px">This certifies that</div>' +
     '<div style="font-size:28px;font-weight:bold;margin:10px auto 12px;padding-bottom:6px;border-bottom:1px solid #c9a227;display:inline-block">' + esc_(L.first + ' ' + L.last) + '</div>' +
-    '<div style="font-size:15px;line-height:1.55;margin:0 auto 26px;max-width:500px">' + esc_(L.role) + ', CPSM Registration No. ' + esc_(L.cpsm) +
-    ', has successfully completed the ' + COURSE_TITLE + ' on <em>The Mental Health Act</em> of Manitoba and Form 4 &mdash; Application for Involuntary Psychiatric Assessment, with a score of ' + score + '/' + total + '.</div>' +
+    '<div style="font-size:15px;line-height:1.55;margin:0 auto 26px;max-width:500px">' + esc_(L.role) + ', has successfully completed the ' + COURSE_TITLE + ' on <em>The Mental Health Act</em> of Manitoba and Form 4 &mdash; Application for Involuntary Psychiatric Assessment, with a score of ' + score + '/' + total + '.</div>' +
     '<table width="100%" style="font-family:Arial,sans-serif;font-size:11px;color:#4a5568;margin-top:18px"><tr>' +
     '<td style="text-align:left;vertical-align:bottom"><div style="width:300px;height:56px;text-align:left"><img src="' + sig + '" alt="Signature" height="52" style="height:52px;margin:0 0 2px 10px"></div><div style="border-top:1px solid #4a5568;padding-top:6px;width:300px">' + SIGNATORY + '<br>' + SIGNATORY_TITLE + '</div></td>' +
     '<td style="text-align:right;vertical-align:bottom">Date: ' + dateStr + '<br>Certificate ID: ' + certId + '</td>' +
@@ -191,7 +189,7 @@ function esc_(s) { return String(s).replace(/[&<>"']/g, function (c) { return { 
 /** Run once from the editor: authorizes, creates the results sheet, emails a sample certificate to you. */
 function setup() {
   const sh = getSheet_();
-  const L = { first: 'Sample', last: 'Learner', role: 'Physician Assistant', cpsm: '00000', email: ADMIN_EMAILS[0] };
+  const L = { first: 'Sample', last: 'Learner', role: 'Physician Assistant', email: ADMIN_EMAILS[0] };
   const now = new Date();
   const certId = makeCertId_(now);
   MailApp.sendEmail({
