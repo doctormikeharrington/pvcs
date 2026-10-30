@@ -114,6 +114,11 @@ function claimShift(id, name, email) {
         sh.getRange(i + 1, 3, 1, 4).setValues([['CLAIMED', name, email, stamp]]);
         const label = data[i][1];
         try {
+          applyClaimToSchedule_(label, name, email, stamp);
+        } catch (err) {
+          Logger.log('schedule update failed: ' + err);
+        }
+        try {
           MailApp.sendEmail({
             to: email,
             cc: ADMIN_EMAIL,
@@ -237,6 +242,9 @@ function setupSchedule() {
   const ss = SpreadsheetApp.openById(id);
   let sh = ss.getSheetByName(SCHEDULE_TAB);
   if (!sh) sh = ss.insertSheet(SCHEDULE_TAB);
+  if (sh.getLastRow() > 1) {
+    throw new Error('Schedule tab already has data. setupSchedule() would wipe give-ups and claims, so it refuses to run. Clear the tab by hand first if you really mean to rebuild it.');
+  }
   sh.clear();
   sh.getRange(1, 1, 1, 5)
     .setValues([['Date', 'Type', 'Assigned to', 'Status', 'Given up at']])
@@ -265,6 +273,7 @@ function labelFor_(iso, type) {
 }
 
 function getNames() {
+  try { syncScheduleFromClaims_(); } catch (err) { Logger.log('sync failed: ' + err); }
   const vals = scheduleSheet_().getDataRange().getValues().slice(1);
   const seen = {};
   vals.forEach(function (r) {
@@ -410,6 +419,113 @@ google.script.run.withSuccessHandler(function(names){
   return HtmlService.createHtmlOutput(html)
     .setTitle('PVCS - Give Up a Shift')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/* ==========================================================================
+ * CLAIM -> SCHEDULE WRITE-THROUGH  (added 2026-10-30)
+ * A claim now updates the Schedule tab: the claimer becomes "Assigned to"
+ * (surname, matching the tab's convention) with Status SCHEDULED, so the
+ * give-up page lists the shift under the new owner. Column F ("Claimed")
+ * records who claimed it and when.
+ * syncScheduleFromClaims_() repairs any claims made before this fix (or
+ * entered by hand in the Shifts tab). It runs every time the give-up page
+ * loads and can also be run from the editor. It only acts on the LATEST
+ * Shifts row for each shift, so a shift claimed and then given up again
+ * (which appends a new OPEN row) is left alone.
+ * ======================================================================== */
+
+const MONTHS_ = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+
+function pad2_(n) { return (n < 10 ? '0' : '') + n; }
+
+// "Fri Nov 27 — Day" / "Thu Dec 31 — Evening (New Year's Eve)" -> "2026-11-27|Day"
+function keyFromLabel_(label) {
+  const m = String(label).match(/^\s*[A-Za-z]{3}\s+([A-Za-z]{3})\s+(\d{1,2})\s*[—–-]\s*(Day|Evening)/);
+  if (!m || MONTHS_[m[1]] === undefined) return null;
+  const sp = SCHEDULE_START.split('-');
+  const startY = Number(sp[0]), startM = Number(sp[1]) - 1;
+  const mon = MONTHS_[m[1]];
+  const y = mon < startM ? startY + 1 : startY;
+  return y + '-' + pad2_(mon + 1) + '-' + pad2_(Number(m[2])) + '|' + m[3];
+}
+
+function titleCase_(w) {
+  w = String(w || '').trim();
+  return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
+}
+
+// Surname as used on the Schedule tab. Prefers the Team tab (matched by
+// email, then by last word of the typed name); falls back to the typed name.
+function surnameFor_(name, email) {
+  const typedLast = String(name || '').trim().split(/\s+/).pop() || '';
+  let team = [];
+  try {
+    const id = PropertiesService.getScriptProperties().getProperty(PROP_SHEET_ID);
+    const t = SpreadsheetApp.openById(id).getSheetByName(TEAM_TAB);
+    if (t) team = t.getDataRange().getValues().slice(1);
+  } catch (err) {}
+  const em = String(email || '').trim().toLowerCase();
+  for (let i = 0; i < team.length; i++) {
+    if (em && String(team[i][1]).trim().toLowerCase() === em) {
+      return String(team[i][0]).trim().split(/\s+/).pop();
+    }
+  }
+  for (let i = 0; i < team.length; i++) {
+    const last = String(team[i][0]).trim().split(/\s+/).pop();
+    if (last && last.toLowerCase() === typedLast.toLowerCase()) return last;
+  }
+  return titleCase_(typedLast);
+}
+
+// Returns true if the Schedule tab was changed.
+function applyClaimToSchedule_(label, name, email, stamp) {
+  const key = keyFromLabel_(label);
+  if (!key) return false;
+  const sh = scheduleSheet_();
+  if (!sh) return false;
+  if (!sh.getRange(1, 6).getValue()) sh.getRange(1, 6).setValue('Claimed').setFontWeight('bold');
+  const surname = surnameFor_(name, email);
+  if (!surname) return false;
+  const vals = sh.getDataRange().getValues();
+  for (let i = 1; i < vals.length; i++) {
+    if (isoOf_(vals[i][0]) + '|' + vals[i][1] !== key) continue;
+    if (String(vals[i][2]) === surname && vals[i][3] === 'SCHEDULED') return false;
+    const prev = (vals[i][2] && vals[i][2] !== 'OPEN') ? ' (from ' + vals[i][2] + ')' : '';
+    const when = (stamp instanceof Date) ? Utilities.formatDate(stamp, TZ, 'yyyy-MM-dd HH:mm:ss') : String(stamp || '');
+    sh.getRange(i + 1, 3, 1, 2).setValues([[surname, 'SCHEDULED']]);
+    sh.getRange(i + 1, 6).setValue('Claimed by ' + surname + ' ' + when + prev);
+    return true;
+  }
+  return false;
+}
+
+function syncScheduleFromClaims_() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return 0;
+  try {
+    const rows = sheet_().getDataRange().getValues().slice(1);
+    const latest = {};
+    rows.forEach(function (r) {
+      const key = keyFromLabel_(r[1]);
+      if (key) latest[key] = r;            // later rows win
+    });
+    let changed = 0;
+    Object.keys(latest).forEach(function (key) {
+      const r = latest[key];
+      const st = String(r[2]).toUpperCase();
+      if ((st === 'CLAIMED' || st === 'ASSIGNED') && String(r[3]).trim()) {
+        if (applyClaimToSchedule_(r[1], r[3], r[4], r[5])) changed++;
+      }
+    });
+    return changed;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Run from the editor to repair the Schedule tab by hand.
+function syncScheduleFromClaims() {
+  Logger.log('Schedule rows updated: ' + syncScheduleFromClaims_());
 }
 
 function doGet(e) {
